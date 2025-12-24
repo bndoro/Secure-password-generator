@@ -1,10 +1,104 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+  background: #0b0f17;
+  color: #e6e9ef;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.card {
+  background: #101827;
+  padding: 24px;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 0 40px rgba(0,0,0,0.4);
+}
+
+h1 {
+  margin-top: 0;
+}
+
+.sub {
+  color: #9aa4bf;
+  font-size: 14px;
+}
+
+label {
+  display: block;
+  margin-top: 12px;
+}
+
+input[type="text"],
+input[type="password"],
 select {
   width: 100%;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,0.03);
-  color: var(--text);
-  outline: none;
+  padding: 8px;
+  margin-top: 4px;
+  background: #1b2235;
+  color: white;
+  border: none;
+  border-radius: 6px;
 }
-select:focus { border-color: rgba(124,58,237,0.7); }
+
+input[type="range"] {
+  width: 100%;
+}
+
+.checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.outRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+button {
+  background: #7c3aed;
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.85;
+}
+
+.hint {
+  font-size: 13px;
+  color: #9aa4bf;
+}
+
+.meter {
+  margin-top: 16px;
+}
+
+.bar {
+  height: 10px;
+  background: #222;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #7c3aed, #3b82f6);
+  transition: width 0.2s;
+}
+
+ul {
+  color: #fbbf24;
+  padding-left: 18px;
+}
