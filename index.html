@@ -1,17 +1,29 @@
-<section class="grid">
-  <div class="row">
-    <label for="mode">Mode</label>
-    <select id="mode">
-      <option value="password" selected>Password</option>
-      <option value="passphrase">Passphrase</option>
-    </select>
-  </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Secure Password Generator</title>
 
-  <div id="passwordControls">
-    <div class="row">
-      <label for="length">Length: <span id="lengthValue">16</span></label>
-      <input id="length" type="range" min="8" max="64" value="16" />
-    </div>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <main class="card">
+    <h1>Secure Password Generator</h1>
+    <p class="sub">CSPRNG-based generator with strength meter</p>
+
+    <label>
+      Mode
+      <select id="mode">
+        <option value="password">Password</option>
+      </select>
+    </label>
+
+    <label>
+      Length: <span id="lengthValue">16</span>
+      <input type="range" id="length" min="8" max="64" value="16">
+    </label>
 
     <div class="checks">
       <label><input type="checkbox" id="lower" checked> Lowercase (a-z)</label>
@@ -21,58 +33,32 @@
     </div>
 
     <div class="checks">
-      <label><input type="checkbox" id="noAmbiguous" checked> Exclude ambiguous (O0 I1 l)</label>
-      <label><input type="checkbox" id="noSimilar"> Exclude similar (e.g., { } [ ] ( ) / \ ' " ` ~)</label>
+      <label><input type="checkbox" id="noAmbiguous" checked> Exclude ambiguous (O 0 I 1 l)</label>
     </div>
 
-    <div class="row">
-      <label for="exclude">Exclude characters (optional)</label>
-      <input id="exclude" type="text" placeholder="e.g. @#$" autocomplete="off" />
-    </div>
-  </div>
+    <label>
+      Exclude characters (optional)
+      <input type="text" id="exclude" placeholder="@#$">
+    </label>
 
-  <div id="passphraseControls" style="display:none;">
-    <div class="row">
-      <label for="words">Words: <span id="wordsValue">5</span></label>
-      <input id="words" type="range" min="3" max="10" value="5" />
-    </div>
-
-    <div class="row">
-      <label for="separator">Separator</label>
-      <input id="separator" type="text" value="-" maxlength="3" />
-    </div>
-
-    <div class="checks">
-      <label><input type="checkbox" id="capWords"> Capitalize Words</label>
-      <label><input type="checkbox" id="addDigit"> Append Digit</label>
-      <label><input type="checkbox" id="addSymbol"> Append Symbol</label>
-    </div>
-  </div>
-
-  <div class="output">
-    <label for="password">Generated</label>
+    <label>Generated Password</label>
     <div class="outRow">
-      <input id="password" type="password" readonly />
+      <input type="password" id="password" readonly>
       <button id="toggle">Show</button>
       <button id="copy">Copy</button>
       <button id="regen">Regenerate</button>
     </div>
-    <div class="hint" id="copyStatus" aria-live="polite"></div>
-  </div>
 
-  <div class="meter">
-    <div class="meterTop">
-      <span>Strength</span>
-      <span id="strengthLabel">—</span>
+    <p id="copyStatus" class="hint"></p>
+
+    <div class="meter">
+      <p><strong>Strength:</strong> <span id="strengthLabel">—</span></p>
+      <div class="bar"><div id="barFill" class="fill"></div></div>
+      <p><strong>Entropy:</strong> <span id="entropyBits">—</span> bits</p>
+      <p><strong>Est. crack time (offline):</strong> <span id="crackFast">—</span></p>
+      <p><strong>Est. crack time (online):</strong> <span id="crackOnline">—</span></p>
+      <ul id="warnings"></ul>
     </div>
-    <div class="bar">
-      <div id="barFill" class="fill"></div>
-    </div>
-    <div class="details">
-      <div><strong>Entropy:</strong> <span id="entropyBits">—</span> bits</div>
-      <div><strong>Est. crack time (offline fast):</strong> <span id="crackFast">—</span></div>
-      <div><strong>Est. crack time (online):</strong> <span id="crackOnline">—</span></div>
-    </div>
-    <ul id="warnings" class="warnings"></ul>
-  </div>
-</section>
+  </main>
+</body>
+</html>
