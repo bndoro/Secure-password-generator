@@ -1,0 +1,78 @@
+<section class="grid">
+  <div class="row">
+    <label for="mode">Mode</label>
+    <select id="mode">
+      <option value="password" selected>Password</option>
+      <option value="passphrase">Passphrase</option>
+    </select>
+  </div>
+
+  <div id="passwordControls">
+    <div class="row">
+      <label for="length">Length: <span id="lengthValue">16</span></label>
+      <input id="length" type="range" min="8" max="64" value="16" />
+    </div>
+
+    <div class="checks">
+      <label><input type="checkbox" id="lower" checked> Lowercase (a-z)</label>
+      <label><input type="checkbox" id="upper" checked> Uppercase (A-Z)</label>
+      <label><input type="checkbox" id="digits" checked> Digits (0-9)</label>
+      <label><input type="checkbox" id="symbols" checked> Symbols</label>
+    </div>
+
+    <div class="checks">
+      <label><input type="checkbox" id="noAmbiguous" checked> Exclude ambiguous (O0 I1 l)</label>
+      <label><input type="checkbox" id="noSimilar"> Exclude similar (e.g., { } [ ] ( ) / \ ' " ` ~)</label>
+    </div>
+
+    <div class="row">
+      <label for="exclude">Exclude characters (optional)</label>
+      <input id="exclude" type="text" placeholder="e.g. @#$" autocomplete="off" />
+    </div>
+  </div>
+
+  <div id="passphraseControls" style="display:none;">
+    <div class="row">
+      <label for="words">Words: <span id="wordsValue">5</span></label>
+      <input id="words" type="range" min="3" max="10" value="5" />
+    </div>
+
+    <div class="row">
+      <label for="separator">Separator</label>
+      <input id="separator" type="text" value="-" maxlength="3" />
+    </div>
+
+    <div class="checks">
+      <label><input type="checkbox" id="capWords"> Capitalize Words</label>
+      <label><input type="checkbox" id="addDigit"> Append Digit</label>
+      <label><input type="checkbox" id="addSymbol"> Append Symbol</label>
+    </div>
+  </div>
+
+  <div class="output">
+    <label for="password">Generated</label>
+    <div class="outRow">
+      <input id="password" type="password" readonly />
+      <button id="toggle">Show</button>
+      <button id="copy">Copy</button>
+      <button id="regen">Regenerate</button>
+    </div>
+    <div class="hint" id="copyStatus" aria-live="polite"></div>
+  </div>
+
+  <div class="meter">
+    <div class="meterTop">
+      <span>Strength</span>
+      <span id="strengthLabel">—</span>
+    </div>
+    <div class="bar">
+      <div id="barFill" class="fill"></div>
+    </div>
+    <div class="details">
+      <div><strong>Entropy:</strong> <span id="entropyBits">—</span> bits</div>
+      <div><strong>Est. crack time (offline fast):</strong> <span id="crackFast">—</span></div>
+      <div><strong>Est. crack time (online):</strong> <span id="crackOnline">—</span></div>
+    </div>
+    <ul id="warnings" class="warnings"></ul>
+  </div>
+</section>
