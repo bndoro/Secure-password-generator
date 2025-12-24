@@ -7,10 +7,19 @@ const SETS = {
 
 const AMBIGUOUS = new Set(["O", "0", "I", "1", "l"]);
 
+function el(id) {
+  return document.getElementById(id);
+}
+
+function isChecked(id) {
+  const element = el(id);
+  return element ? element.checked : false;
+}
+
 function randomInt(max) {
-  const arr = new Uint32Array(1);
-  crypto.getRandomValues(arr);
-  return arr[0] % max;
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return buf[0] % max;
 }
 
 function generatePassword(length, opts) {
@@ -19,7 +28,12 @@ function generatePassword(length, opts) {
 
   for (const key in SETS) {
     if (opts[key]) {
-      let chars = SETS[key].split("").filter(c => !opts.noAmbiguous || !AMBIGUOUS.has(c));
+      let chars = SETS[key].split("").filter(c =>
+        !opts.noAmbiguous || !AMBIGUOUS.has(c)
+      );
+
+      if (chars.length === 0) continue;
+
       pool += chars.join("");
       required.push(chars[randomInt(chars.length)]);
     }
@@ -32,7 +46,13 @@ function generatePassword(length, opts) {
     result.push(pool[randomInt(pool.length)]);
   }
 
-  return result.sort(() => randomInt(2) - 1).join("");
+  // Fisher-Yates shuffle
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+
+  return result.join("");
 }
 
 function entropyBits(password, poolSize) {
@@ -44,45 +64,53 @@ function crackTime(bits, rate) {
 }
 
 function formatTime(seconds) {
+  if (!isFinite(seconds)) return "—";
   if (seconds < 60) return `${seconds.toFixed(1)} sec`;
   if (seconds < 3600) return `${(seconds / 60).toFixed(1)} min`;
   if (seconds < 86400) return `${(seconds / 3600).toFixed(1)} hr`;
   return `${(seconds / 86400).toFixed(1)} days`;
 }
 
-const el = id => document.getElementById(id);
-
 function regenerate() {
-  const opts = {
-    lower: el("lower").checked,
-    upper: el("upper").checked,
-    digits: el("digits").checked,
-    symbols: el("symbols").checked,
-    noAmbiguous: el("noAmbiguous").checked
-  };
+  try {
+    const opts = {
+      lower: isChecked("lower"),
+      upper: isChecked("upper"),
+      digits: isChecked("digits"),
+      symbols: isChecked("symbols"),
+      noAmbiguous: isChecked("noAmbiguous")
+    };
 
-  const length = +el("length").value;
-  const password = generatePassword(length, opts);
-  el("password").value = password;
+    const length = Number(el("length").value);
+    const password = generatePassword(length, opts);
 
-  let poolSize = Object.entries(SETS)
-    .filter(([k]) => opts[k])
-    .reduce((sum, [, v]) => sum + v.length, 0);
+    el("password").value = password;
 
-  const bits = entropyBits(password, poolSize);
-  el("entropyBits").textContent = bits.toFixed(1);
+    let poolSize = 0;
+    for (const key in SETS) {
+      if (opts[key]) poolSize += SETS[key].length;
+    }
 
-  el("crackFast").textContent = formatTime(crackTime(bits, 1e10));
-  el("crackOnline").textContent = formatTime(crackTime(bits, 10));
+    const bits = entropyBits(password, poolSize);
 
-  let strength = "Weak";
-  let pct = 20;
-  if (bits > 70) { strength = "Very Strong"; pct = 90; }
-  else if (bits > 50) { strength = "Strong"; pct = 70; }
-  else if (bits > 35) { strength = "Fair"; pct = 45; }
+    el("entropyBits").textContent = bits.toFixed(1);
+    el("crackFast").textContent = formatTime(crackTime(bits, 1e10));
+    el("crackOnline").textContent = formatTime(crackTime(bits, 10));
 
-  el("strengthLabel").textContent = strength;
-  el("barFill").style.width = pct + "%";
+    let strength = "Weak";
+    let pct = 20;
+    if (bits > 70) { strength = "Very Strong"; pct = 90; }
+    else if (bits > 50) { strength = "Strong"; pct = 70; }
+    else if (bits > 35) { strength = "Fair"; pct = 45; }
+
+    el("strengthLabel").textContent = strength;
+    el("barFill").style.width = pct + "%";
+
+    el("warnings").innerHTML = "";
+
+  } catch (err) {
+    el("warnings").innerHTML = `<li>${err.message}</li>`;
+  }
 }
 
 el("length").addEventListener("input", e => {
@@ -90,9 +118,10 @@ el("length").addEventListener("input", e => {
   regenerate();
 });
 
-["lower","upper","digits","symbols","noAmbiguous"].forEach(id =>
-  el(id).addEventListener("change", regenerate)
-);
+["lower","upper","digits","symbols","noAmbiguous"].forEach(id => {
+  const checkbox = el(id);
+  if (checkbox) checkbox.addEventListener("change", regenerate);
+});
 
 el("regen").addEventListener("click", regenerate);
 
