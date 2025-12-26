@@ -45,6 +45,17 @@ select {
   border-radius: 6px;
 }
 
+textarea {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  background: #1b2235;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+}
+
 input[type="range"] {
   width: 100%;
 }
