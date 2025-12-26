@@ -11,13 +11,13 @@
 <body>
   <main class="card">
     <h1>Secure Password Generator</h1>
-    <p class="sub">CSPRNG-based generator with strength meter + custom passphrase mode</p>
+    <p class="sub">CSPRNG-based generator with strength meter + passphrase mode</p>
 
     <label>
       Mode
       <select id="mode">
         <option value="password" selected>Password</option>
-        <option value="passphrase">Passphrase (use my words)</option>
+        <option value="passphrase">Passphrase (built-in or my words)</option>
       </select>
     </label>
 
@@ -48,9 +48,13 @@
     <!-- PASSPHRASE CONTROLS -->
     <section id="passphraseControls" style="display:none;">
       <label>
-        Your word list (one per line or comma-separated)
+        Your word list (optional — one per line or comma-separated)
         <textarea id="customWords" rows="6" placeholder="red&#10;planet&#10;secure&#10;vault&#10;summer"></textarea>
       </label>
+
+      <div class="checks">
+        <label><input type="checkbox" id="useCustomOnly"> Use my words only (no fallback)</label>
+      </div>
 
       <label>
         Words to use: <span id="wordsValue">5</span>
@@ -69,7 +73,7 @@
         <label><input type="checkbox" id="allowRepeats" checked> Allow repeats</label>
       </div>
 
-      <p class="hint">Tip: Add 20+ words for stronger passphrases.</p>
+      <p class="hint">Leave the list blank to use the built-in wordlist.</p>
     </section>
 
     <label>Generated</label>
