@@ -216,4 +216,38 @@ el("length").addEventListener("input", (e) => {
 ["lower","upper","digits","symbols","noAmbiguous","exclude"].forEach(id => {
   const n = el(id);
   if (!n) return;
-  n.addEventListener("input"
+  n.addEventListener("input", regenerate);
+  n.addEventListener("change", regenerate);
+});
+
+el("words").addEventListener("input", (e) => {
+  el("wordsValue").textContent = e.target.value;
+  regenerate();
+});
+["customWords","separator","capWords","appendDigit","appendSymbol","allowRepeats"].forEach(id => {
+  const n = el(id);
+  if (!n) return;
+  n.addEventListener("input", regenerate);
+  n.addEventListener("change", regenerate);
+});
+
+el("regen").addEventListener("click", regenerate);
+
+el("toggle").addEventListener("click", () => {
+  const pw = el("password");
+  pw.type = pw.type === "password" ? "text" : "password";
+  el("toggle").textContent = pw.type === "password" ? "Show" : "Hide";
+});
+
+el("copy").addEventListener("click", () => {
+  const txt = el("password").value;
+  if (!txt) return;
+  navigator.clipboard.writeText(txt);
+  el("copyStatus").textContent = "Copied!";
+  setTimeout(() => el("copyStatus").textContent = "", 1200);
+});
+
+// init
+el("lengthValue").textContent = val("length") || "16";
+el("wordsValue").textContent = val("words") || "5";
+setModeUI();
