@@ -12,14 +12,23 @@ const AMBIGUOUS = new Set(["O", "0", "I", "1", "l"]);
 
 // Built-in fallback wordlist (expand later if you want)
 const DEFAULT_WORDLIST = [
+  "quiet","brave","rapid","gentle","silent","bright","blue","green","cosmic","secure",
   "orbit","cobalt","lantern","cipher","rocket","matrix","forest","signal","ember","nova",
-  "radar","vault","pixel","kernel","silent","thunder","anchor","vertex","prism","harbor",
-  "titan","cloud","onyx","quartz","fusion","delta","phoenix","aurora","cosmic","shield",
-  "falcon","magnet","vector","socket","carbon","jigsaw","neon","summit","gravity","zenith",
-  "ripple","cascade","octave","paradox","mercury","atlas","nimbus","spectrum","wavelength",
-  "safeguard","firewall","packet","token","hash","salt","harden","monitor","detect","response",
-  "secure","policy","access","audit","backup","endpoint","incident","alert","threat","defense"
+  "radar","vault","pixel","kernel","thunder","anchor","vertex","prism","harbor","titan",
+  "cloud","onyx","quartz","fusion","delta","phoenix","aurora","shield","falcon","vector",
+  "socket","carbon","jigsaw","neon","summit","gravity","zenith","ripple","cascade","octave",
+  "paradox","mercury","atlas","nimbus","spectrum","wavelength","firewall","packet","token",
+  "hash","salt","harden","monitor","detect","response","policy","access","audit","backup",
+  "endpoint","incident","alert","threat","defense"
 ];
+
+// Simple English glue words for sentence templates
+const GLUE = {
+  determiners: ["the", "a", "this"],
+  preps: ["over", "under", "near", "beyond", "within", "around"],
+  verbs: ["moves", "guards", "protects", "shifts", "drifts", "covers", "secures", "tests"],
+  adverbs: ["quietly", "swiftly", "carefully", "boldly"]
+};
 
 // =====================
 // DOM helpers
@@ -34,7 +43,7 @@ function val(id){ const e = el(id); return e ? e.value : ""; }
 function randomInt(maxExclusive){
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
-  return buf[0] % maxExclusive; // UI-grade; upgrade to rejection sampling if you want perfect uniformity
+  return buf[0] % maxExclusive;
 }
 
 function shuffle(arr){
@@ -43,6 +52,79 @@ function shuffle(arr){
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+// =====================
+// No-repeat tracking (hashed)
+// =====================
+// We store only hashes in localStorage (not plaintext).
+// This prevents repeats across reloads, but is still finite/best-effort.
+const sessionSeen = new Set();
+
+function fnv1a32(str){
+  // Non-cryptographic hash; enough for "avoid repeats" without storing plaintext.
+  // Returns hex.
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++){
+    h ^= str.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
+
+function makeHistoryKey(scope){
+  return `pwgen_history_${scope}`;
+}
+
+function loadHistory(scope){
+  const key = makeHistoryKey(scope);
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return new Set();
+    return new Set(arr);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveHistory(scope, set){
+  const key = makeHistoryKey(scope);
+  // cap to prevent unbounded growth
+  const MAX = 4000;
+  const arr = Array.from(set);
+  const trimmed = arr.length > MAX ? arr.slice(arr.length - MAX) : arr;
+  localStorage.setItem(key, JSON.stringify(trimmed));
+}
+
+function computeScopeFingerprint(mode, effectiveWordlist){
+  // Uniqueness scope changes when the wordlist changes.
+  // This avoids a massive "global" history that blocks outputs after user edits words.
+  const wl = effectiveWordlist.map(w => w.toLowerCase()).sort().join(",");
+  return `${mode}_${fnv1a32(wl)}`;
+}
+
+function isRepeat(candidate, scope, noRepeatEnabled){
+  if (!noRepeatEnabled) return false;
+  const hash = fnv1a32(candidate);
+
+  if (sessionSeen.has(`${scope}:${hash}`)) return true;
+
+  const persisted = loadHistory(scope);
+  if (persisted.has(hash)) return true;
+
+  return false;
+}
+
+function remember(candidate, scope, noRepeatEnabled){
+  if (!noRepeatEnabled) return;
+  const hash = fnv1a32(candidate);
+  sessionSeen.add(`${scope}:${hash}`);
+
+  const persisted = loadHistory(scope);
+  persisted.add(hash);
+  saveHistory(scope, persisted);
 }
 
 // =====================
@@ -76,11 +158,10 @@ function buildPasswordPool(opts){
   return { pool, groups };
 }
 
-function generatePassword(opts){
+function generatePasswordOnce(opts){
   const { pool, groups } = buildPasswordPool(opts);
   const out = [];
 
-  // Ensure at least one per selected group
   for (const g of groups) out.push(g[randomInt(g.length)]);
   while (out.length < opts.length) out.push(pool[randomInt(pool.length)]);
 
@@ -88,8 +169,24 @@ function generatePassword(opts){
   return { value: out.join(""), poolSize: pool.length };
 }
 
+function generatePasswordNoRepeat(opts, noRepeatEnabled){
+  // scope for passwords: based on the pool definition (not perfect, but good)
+  const { pool } = buildPasswordPool(opts);
+  const scope = `password_${fnv1a32(pool)}`;
+
+  const MAX_TRIES = 200;
+  for (let i = 0; i < MAX_TRIES; i++){
+    const out = generatePasswordOnce(opts);
+    if (!isRepeat(out.value, scope, noRepeatEnabled)){
+      remember(out.value, scope, noRepeatEnabled);
+      return out;
+    }
+  }
+  throw new Error("Could not find a new unique password. Change length/options to expand the search space.");
+}
+
 // =====================
-// PASSPHRASE MODE (custom OR fallback)
+// PASSPHRASE MODE (sentence-style + custom/fallback)
 // =====================
 function parseCustomWords(text){
   const raw = text
@@ -97,7 +194,6 @@ function parseCustomWords(text){
     .map(w => w.trim())
     .filter(Boolean);
 
-  // dedupe case-insensitively
   const seen = new Set();
   const words = [];
   for (const w of raw){
@@ -110,11 +206,15 @@ function parseCustomWords(text){
   return words;
 }
 
-function cap(w){
+function capFirst(w){
   return w.length ? w[0].toUpperCase() + w.slice(1) : w;
 }
 
-function pickWords({ wordCount, list, allowRepeats, capWords, separator }){
+function pickFrom(list){
+  return list[randomInt(list.length)];
+}
+
+function pickWords({ wordCount, list, allowRepeats }){
   if (!allowRepeats && wordCount > list.length){
     throw new Error("Not enough unique words for that count. Turn on 'Allow repeats' or add more words.");
   }
@@ -124,19 +224,64 @@ function pickWords({ wordCount, list, allowRepeats, capWords, separator }){
 
   for (let i = 0; i < wordCount; i++){
     const source = allowRepeats ? list : available;
-    const pick = source[randomInt(source.length)];
-    chosen.push(capWords ? cap(pick) : pick);
+    const pick = pickFrom(source);
+    chosen.push(pick);
 
     if (!allowRepeats){
       const idx = available.indexOf(pick);
       if (idx >= 0) available.splice(idx, 1);
     }
   }
-
-  return chosen.join(separator);
+  return chosen;
 }
 
-function generatePassphrase(opts){
+// Sentence template generator.
+// We keep glue words fixed, and inject your words into “slots”.
+function makeSentence(chosenWords, opts){
+  // Ensure we have at least 4+ chosen words to place.
+  const words = [...chosenWords];
+  while (words.length < 4) words.push(pickFrom(chosenWords));
+
+  const det1 = pickFrom(GLUE.determiners);
+  const det2 = pickFrom(GLUE.determiners);
+  const prep = pickFrom(GLUE.preps);
+  const verb = pickFrom(GLUE.verbs);
+  const adv = pickFrom(GLUE.adverbs);
+
+  // Template: "the W1 W2 verb adv prep the W3 W4"
+  // Looks English-like without needing POS tagging.
+  let sentence = `${det1} ${words[0]} ${words[1]} ${verb} ${adv} ${prep} ${det2} ${words[2]} ${words[3]}`;
+
+  // If user requested more words, append as a tail phrase: "with W5 W6 ..."
+  if (words.length > 4){
+    const tail = words.slice(4).join(" ");
+    sentence += ` with ${tail}`;
+  }
+
+  // Capitalize first word if enabled
+  if (opts.capFirstWord){
+    sentence = capFirst(sentence);
+  }
+
+  // Add period for readability; still copyable as a “password”
+  sentence += ".";
+
+  return sentence;
+}
+
+function makeJoinPassphrase(chosenWords, opts){
+  const sep = (opts.separator ?? "-").toString();
+  let phrase = chosenWords.join(sep);
+  if (opts.capFirstWord && chosenWords.length > 0){
+    // capitalize first token only (more sentence-like)
+    const parts = phrase.split(sep);
+    parts[0] = capFirst(parts[0]);
+    phrase = parts.join(sep);
+  }
+  return phrase;
+}
+
+function generatePassphraseOnce(opts){
   const custom = parseCustomWords(opts.customWords || "");
   const useCustomOnly = opts.useCustomOnly;
 
@@ -158,19 +303,40 @@ function generatePassphrase(opts){
     throw new Error("Wordlist is too small. Add more words.");
   }
 
-  const phrase = pickWords({
+  const chosen = pickWords({
     wordCount: opts.words,
     list: listToUse,
-    allowRepeats: opts.allowRepeats,
-    capWords: opts.capWords,
-    separator: opts.separator
+    allowRepeats: opts.allowRepeats
   });
 
-  let finalValue = phrase;
+  let base;
+  if (opts.sentenceMode){
+    base = makeSentence(chosen, { capFirstWord: opts.capWords });
+  } else {
+    base = makeJoinPassphrase(chosen, { separator: opts.separator, capFirstWord: opts.capWords });
+  }
+
+  let finalValue = base;
   if (opts.appendDigit) finalValue += SETS.digits[randomInt(SETS.digits.length)];
   if (opts.appendSymbol) finalValue += SETS.symbols[randomInt(SETS.symbols.length)];
 
-  return { value: finalValue, wordlistSize: listToUse.length, sourceName };
+  return { value: finalValue, wordlistSize: listToUse.length, sourceName, effectiveWordlist: listToUse };
+}
+
+function generatePassphraseNoRepeat(opts){
+  const temp = generatePassphraseOnce(opts);
+  const scope = computeScopeFingerprint("passphrase", temp.effectiveWordlist);
+  const noRepeatEnabled = opts.noRepeat;
+
+  const MAX_TRIES = 250;
+  for (let i = 0; i < MAX_TRIES; i++){
+    const out = generatePassphraseOnce(opts);
+    if (!isRepeat(out.value, scope, noRepeatEnabled)){
+      remember(out.value, scope, noRepeatEnabled);
+      return out;
+    }
+  }
+  throw new Error("Could not find a new unique passphrase. Add more words or allow repeats to expand the space.");
 }
 
 // =====================
@@ -235,32 +401,34 @@ function regenerate(){
         exclude: val("exclude")
       };
 
-      out = generatePassword(opts);
+      // password no-repeat always ON by default (session+persisted)
+      out = generatePasswordNoRepeat(opts, true);
       bits = entropyPassword(out.value.length, out.poolSize);
 
     } else {
       const opts = {
         customWords: val("customWords"),
         useCustomOnly: isChecked("useCustomOnly"),
-        words: Number(val("words") || 5),
+        sentenceMode: isChecked("sentenceMode"),
+        words: Number(val("words") || 6),
         separator: val("separator") || "-",
         capWords: isChecked("capWords"),
         appendDigit: isChecked("appendDigit"),
         appendSymbol: isChecked("appendSymbol"),
-        allowRepeats: isChecked("allowRepeats")
+        allowRepeats: isChecked("allowRepeats"),
+        noRepeat: isChecked("noRepeat")
       };
 
-      out = generatePassphrase(opts);
+      out = generatePassphraseNoRepeat(opts);
       bits = entropyPassphrase(opts.words, out.wordlistSize, opts.appendDigit, opts.appendSymbol);
 
       const sourceMsg = out.sourceName === "custom"
-        ? `Using your custom list (${out.wordlistSize} unique words).`
-        : `Using built-in list (${out.wordlistSize} words).`;
+        ? `Sentence from your words (${out.wordlistSize} unique).`
+        : `Sentence from built-in words (${out.wordlistSize}).`;
 
-      let extra = "";
-      if (out.sourceName === "custom" && out.wordlistSize < 20){
-        extra = " Add more words for stronger passphrases.";
-      }
+      const extra = (out.sourceName === "custom" && out.wordlistSize < 20)
+        ? " Add more words to reduce collisions and increase strength."
+        : "";
 
       el("warnings").innerHTML = `<li>${sourceMsg}${extra}</li>`;
     }
@@ -308,7 +476,7 @@ el("words").addEventListener("input", (e) => {
   regenerate();
 });
 
-["customWords","useCustomOnly","separator","capWords","appendDigit","appendSymbol","allowRepeats"].forEach(id => {
+["customWords","useCustomOnly","sentenceMode","separator","capWords","appendDigit","appendSymbol","allowRepeats","noRepeat"].forEach(id => {
   const n = el(id);
   if (!n) return;
   n.addEventListener("input", regenerate);
@@ -333,5 +501,5 @@ el("copy").addEventListener("click", () => {
 
 // init
 el("lengthValue").textContent = val("length") || "16";
-el("wordsValue").textContent = val("words") || "5";
+el("wordsValue").textContent = val("words") || "6";
 setModeUI();
