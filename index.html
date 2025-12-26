@@ -11,62 +11,19 @@
 <body>
   <main class="card">
     <h1>Student Safe Password Generator</h1>
-    <p class="sub">Create memorable, policy-compliant passwords and passphrases for everyday use.</p>
+    <p class="sub">Create memorable, secure passwords that meet real security policies.</p>
 
-    <!-- IMPORTANT INFO (short text on webpage) -->
-    <section>
-      <h2 style="margin:12px 0 6px; font-size:16px;">Important password safety reminders</h2>
-      <ul style="margin:8px 0 0; padding-left:18px;">
-        <li>Do not use personal information (names, birthdays, student ID, etc.).</li>
-        <li>Use passphrases (multiple words) you can remember, e.g., <code>BirdsSwimCoffee_Purple</code> or <code>Battery21BladePixelCup</code>.</li>
-        <li>Do not reuse passwords across websites.</li>
-        <li>Use a password manager; protect it with a strong master password.</li>
-        <li>Avoid easy words like <code>password</code>. Use uncommon words instead.</li>
-        <li>Do not share passwords; use a shared password manager vault for shared accounts.</li>
-        <li>Review accounts yearly and delete old/unused accounts.</li>
-      </ul>
-    </section>
-
-    <hr style="border:0;border-top:1px solid rgba(255,255,255,.08); margin:16px 0;">
-
+    <!-- MODE -->
     <label>
       Mode
       <select id="mode">
-        <option value="password" selected>Password</option>
+        <option value="password" selected>Password (random)</option>
+        <option value="oneword">One-Word Password</option>
         <option value="passphrase">Passphrase</option>
       </select>
     </label>
 
-    <!-- Optional personal info check -->
-    <section>
-      <h2 style="margin:12px 0 6px; font-size:16px;">Optional: personal info check</h2>
-      <p class="sub" style="margin:0 0 8px;">If you enter personal info here, we will warn you if it appears in the result.</p>
-
-      <label>
-        Name / Username (optional)
-        <input id="piName" type="text" placeholder="e.g., Blessing, bndoro">
-      </label>
-
-      <label>
-        Birth year or date (optional)
-        <input id="piBirth" type="text" placeholder="e.g., 2003 or 03/14">
-      </label>
-    </section>
-
-    <hr style="border:0;border-top:1px solid rgba(255,255,255,.08); margin:16px 0;">
-
-    <!-- POLICY REQUIREMENTS (displayed) -->
-    <section>
-      <h2 style="margin:12px 0 6px; font-size:16px;">Password requirements (enforced)</h2>
-      <ul style="margin:8px 0 0; padding-left:18px;">
-        <li>Minimum 12 characters; maximum 32 characters</li>
-        <li>Must include at least 3 of 4 groups: uppercase, lowercase, digits, special characters</li>
-        <li>Spaces allowed, but none at the beginning or end</li>
-        <li>Blocks not-allowed words (example: <code>password</code>)</li>
-      </ul>
-    </section>
-
-    <!-- PASSWORD CONTROLS -->
+    <!-- PASSWORD MODE -->
     <section id="passwordControls">
       <label>
         Length: <span id="lengthValue">16</span>
@@ -74,80 +31,72 @@
       </label>
 
       <div class="checks">
-        <label><input type="checkbox" id="lower" checked> Lowercase (a-z)</label>
-        <label><input type="checkbox" id="upper" checked> Uppercase (A-Z)</label>
-        <label><input type="checkbox" id="digits" checked> Digits (0-9)</label>
+        <label><input type="checkbox" id="lower" checked> Lowercase</label>
+        <label><input type="checkbox" id="upper" checked> Uppercase</label>
+        <label><input type="checkbox" id="digits" checked> Digits</label>
         <label><input type="checkbox" id="symbols" checked> Special characters</label>
-      </div>
-
-      <div class="checks">
-        <label><input type="checkbox" id="allowSpaces"> Allow spaces (not first/last)</label>
-        <label><input type="checkbox" id="noAmbiguous" checked> Exclude ambiguous (O 0 I 1 l)</label>
-      </div>
-
-      <label>
-        Exclude characters (optional)
-        <input id="exclude" type="text" placeholder="@#$">
-      </label>
-
-      <div class="checks">
-        <label><input type="checkbox" id="blockBanned" checked> Block not-allowed words</label>
-        <label><input type="checkbox" id="noRepeatPwd" checked> Prevent repeats (hashed history)</label>
       </div>
     </section>
 
-    <!-- PASSPHRASE CONTROLS -->
-    <section id="passphraseControls" style="display:none;">
+    <!-- ONE WORD PASSWORD MODE -->
+    <section id="oneWordControls" style="display:none;">
+      <p class="sub">Generates a single uncommon word + numbers + symbols (easy to remember).</p>
+
       <label>
-        Your word list (optional — one per line or comma-separated)
-        <textarea id="customWords" rows="6" placeholder="Birds&#10;Swim&#10;Coffee&#10;Purple"></textarea>
+        Base word source
+        <select id="oneWordSource">
+          <option value="builtin" selected>Built-in uncommon words</option>
+          <option value="custom">Use my words</option>
+        </select>
+      </label>
+
+      <label>
+        Custom words (optional)
+        <textarea id="oneWordCustom" rows="4" placeholder="Lantern&#10;Cipher&#10;Vertex"></textarea>
       </label>
 
       <div class="checks">
-        <label><input type="checkbox" id="useCustomOnly"> Use my words only (no fallback)</label>
-        <label><input type="checkbox" id="allowRepeats" checked> Allow word reuse</label>
+        <label><input type="checkbox" id="oneWordCap" checked> Capitalize word</label>
+        <label><input type="checkbox" id="oneWordDigit" checked> Append digits</label>
+        <label><input type="checkbox" id="oneWordSymbol" checked> Append special character</label>
       </div>
+    </section>
+
+    <!-- PASSPHRASE MODE -->
+    <section id="passphraseControls" style="display:none;">
+      <label>
+        Your words (optional)
+        <textarea id="customWords" rows="5" placeholder="Birds&#10;Swim&#10;Coffee&#10;Purple"></textarea>
+      </label>
 
       <label>
-        Words to use: <span id="wordsValue">4</span>
+        Number of words: <span id="wordsValue">4</span>
         <input id="words" type="range" min="3" max="8" value="4" />
       </label>
 
       <label>
-        Style
-        <select id="phraseStyle">
-          <option value="camel" selected>CamelCase (BirdsSwimCoffeePurple)</option>
-          <option value="underscore">Underscore (BirdsSwimCoffee_Purple)</option>
-          <option value="spaced">Spaced (Birds Swim Coffee Purple)</option>
-        </select>
+        Separator (leave blank for none)
+        <input id="separator" type="text" placeholder="e.g. -, _, space">
       </label>
 
       <div class="checks">
-        <label><input type="checkbox" id="ensureDigit" checked> Ensure a digit</label>
-        <label><input type="checkbox" id="ensureSpecial" checked> Ensure a special character</label>
-        <label><input type="checkbox" id="blockBannedPass" checked> Block not-allowed words</label>
-        <label><input type="checkbox" id="noRepeatPhrase" checked> Prevent repeats (hashed history)</label>
+        <label><input type="checkbox" id="ensureDigit" checked> Ensure digit</label>
+        <label><input type="checkbox" id="ensureSpecial" checked> Ensure special</label>
       </div>
-
-      <p class="hint">If you leave the list blank, we use built-in uncommon words.</p>
     </section>
 
-    <label>Generated</label>
+    <!-- OUTPUT -->
+    <label>Generated Password</label>
     <div class="outRow">
       <input id="password" type="password" readonly />
       <button id="toggle">Show</button>
       <button id="copy">Copy</button>
       <button id="regen">Regenerate</button>
     </div>
-    <div id="copyStatus" class="hint"></div>
 
     <div class="meter">
       <div><strong>Strength:</strong> <span id="strengthLabel">—</span></div>
       <div class="bar"><div id="barFill" class="fill"></div></div>
-      <div><strong>Entropy:</strong> <span id="entropyBits">—</span> bits</div>
-      <div><strong>Est. crack time (offline):</strong> <span id="crackFast">—</span></div>
-      <div><strong>Est. crack time (online):</strong> <span id="crackOnline">—</span></div>
-      <ul id="warnings"></ul>
     </div>
   </main>
 </body>
