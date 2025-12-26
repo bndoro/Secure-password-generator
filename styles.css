@@ -1,131 +1,99 @@
-const SETS = {
-  lower: "abcdefghijklmnopqrstuvwxyz",
-  upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-  digits: "0123456789",
-  symbols: "!@#$%^&*()-_=+[]{};:,.<>?"
-};
-
-const AMBIGUOUS = new Set(["O", "0", "I", "1", "l"]);
-
-function el(id) { return document.getElementById(id); }
-function isChecked(id) { const e = el(id); return e ? e.checked : false; }
-function val(id) { const e = el(id); return e ? e.value : ""; }
-
-function randomInt(maxExclusive) {
-  const buf = new Uint32Array(1);
-  crypto.getRandomValues(buf);
-  return buf[0] % maxExclusive; // acceptable for UI; can be upgraded to rejection sampling later
+:root{
+  --bg:#0b0f17;
+  --card:#101827;
+  --text:#e6e9ef;
+  --muted:#9aa4bf;
+  --border:#22304a;
+  --accent:#3b82f6;
+  --accent2:#7c3aed;
 }
 
-function shuffleInPlace(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = randomInt(i + 1);
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background:
+    radial-gradient(900px 500px at 20% 10%, rgba(59,130,246,.22), transparent),
+    radial-gradient(900px 500px at 80% 30%, rgba(124,58,237,.18), transparent),
+    var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  padding:24px;
 }
 
-// ---------------------
-// PASSWORD MODE
-// ---------------------
-function buildPasswordPool(opts) {
-  const exclude = new Set((opts.exclude || "").split(""));
-  let pool = "";
-  const groups = [];
-
-  const filterChar = (c) => {
-    if (exclude.has(c)) return false;
-    if (opts.noAmbiguous && AMBIGUOUS.has(c)) return false;
-    return true;
-  };
-
-  for (const key of ["lower","upper","digits","symbols"]) {
-    if (opts[key]) {
-      const g = SETS[key].split("").filter(filterChar).join("");
-      if (g.length > 0) groups.push(g);
-      pool += g;
-    }
-  }
-
-  if (!pool || groups.length === 0) throw new Error("Select at least one character set (and ensure exclusions don’t remove all chars).");
-  if (opts.length < groups.length) throw new Error("Length too short for selected character sets.");
-
-  return { pool, groups };
+.card{
+  width:min(780px, 100%);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), transparent), var(--card);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:22px;
+  box-shadow: 0 18px 60px rgba(0,0,0,.35);
 }
 
-function generatePassword(opts) {
-  const { pool, groups } = buildPasswordPool(opts);
-  const out = [];
+h1{ margin:0 0 8px; font-size:24px; }
+.sub{ margin:0 0 18px; color:var(--muted); }
 
-  // guarantee one from each group
-  for (const g of groups) out.push(g[randomInt(g.length)]);
-  while (out.length < opts.length) out.push(pool[randomInt(pool.length)]);
-
-  shuffleInPlace(out);
-  return out.join("");
+label{ display:block; margin-top:12px; color:var(--muted); }
+input, select, textarea{
+  width:100%;
+  margin-top:6px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background: rgba(255,255,255,.04);
+  color:var(--text);
+  outline:none;
+  font: inherit;
+}
+input:focus, select:focus, textarea:focus{
+  border-color: rgba(59,130,246,.75);
 }
 
-// ---------------------
-// PASSPHRASE MODE (custom words)
-// ---------------------
-function parseCustomWords(text) {
-  // Accept newline or comma-separated; trim; remove empties; dedupe
-  const raw = text
-    .split(/[\n,]+/g)
-    .map(w => w.trim())
-    .filter(Boolean);
-
-  // dedupe while preserving order
-  const seen = new Set();
-  const words = [];
-  for (const w of raw) {
-    const key = w.toLowerCase();
-    if (!seen.has(key)) {
-      seen.add(key);
-      words.push(w);
-    }
-  }
-  return words;
+.checks{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap:10px;
+  margin-top:10px;
 }
+.checks label{ color:var(--text); margin:0; }
+.checks input{ width:auto; margin:0 8px 0 0; padding:0; }
 
-function capitalize(w) {
-  return w.length ? w[0].toUpperCase() + w.slice(1) : w;
+.outRow{
+  display:grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap:10px;
+  align-items:center;
+  margin-top:6px;
 }
-
-function generatePassphraseFromCustomWords(opts) {
-  const words = parseCustomWords(opts.customWords || "");
-  if (words.length < 2) {
-    throw new Error("Add at least 2 words to your word list for passphrase mode.");
-  }
-
-  const count = opts.words;
-  if (!opts.allowRepeats && count > words.length) {
-    throw new Error("Not enough unique words for the selected word count (turn on 'Allow repeats' or add more words).");
-  }
-
-  const chosen = [];
-  const available = [...words];
-
-  for (let i = 0; i < count; i++) {
-    const list = opts.allowRepeats ? words : available;
-    const pick = list[randomInt(list.length)];
-
-    chosen.push(opts.capWords ? capitalize(pick) : pick);
-
-    if (!opts.allowRepeats) {
-      const idx = available.findIndex(x => x === pick);
-      if (idx >= 0) available.splice(idx, 1);
-    }
-  }
-
-  let phrase = chosen.join(opts.separator);
-
-  if (opts.appendDigit) phrase += SETS.digits[randomInt(SETS.digits.length)];
-  if (opts.appendSymbol) phrase += SETS.symbols[randomInt(SETS.symbols.length)];
-
-  return { phrase, wordlistSize: words.length };
+button{
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background: rgba(255,255,255,.05);
+  color:var(--text);
+  cursor:pointer;
 }
+button:hover{ border-color: rgba(59,130,246,.75); }
 
-// ---------------------
-// Strength + crack time (estimates)
-// ----------------
+.hint{ color:var(--muted); font-size:13px; min-height:18px; }
+
+.meter{ margin-top:16px; }
+.bar{
+  height:12px;
+  border-radius:999px;
+  background: rgba(255,255,255,.06);
+  border:1px solid var(--border);
+  overflow:hidden;
+  margin:8px 0 10px;
+}
+.fill{
+  height:100%;
+  width:0%;
+  background: linear-gradient(90deg, rgba(59,130,246,.95), rgba(124,58,237,.95));
+  transition: width .15s ease;
+}
+#warnings{ color:#fbbf24; }
