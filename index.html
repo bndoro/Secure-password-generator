@@ -3,91 +3,133 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Secure Password Generator</title>
+  <title>Student Safe Password Generator</title>
 
   <link rel="stylesheet" href="./styles.css">
   <script src="./app.js" defer></script>
 </head>
 <body>
   <main class="card">
-    <h1>Secure Password Generator</h1>
-    <p class="sub">CSPRNG generator with strength meter + sentence-style passphrases + no-repeat</p>
+    <h1>Student Safe Password Generator</h1>
+    <p class="sub">Create memorable, policy-compliant passwords and passphrases for everyday use.</p>
+
+    <!-- IMPORTANT INFO (short text on webpage) -->
+    <section>
+      <h2 style="margin:12px 0 6px; font-size:16px;">Important password safety reminders</h2>
+      <ul style="margin:8px 0 0; padding-left:18px;">
+        <li>Do not use personal information (names, birthdays, student ID, etc.).</li>
+        <li>Use passphrases (multiple words) you can remember, e.g., <code>BirdsSwimCoffee_Purple</code> or <code>Battery21BladePixelCup</code>.</li>
+        <li>Do not reuse passwords across websites.</li>
+        <li>Use a password manager; protect it with a strong master password.</li>
+        <li>Avoid easy words like <code>password</code>. Use uncommon words instead.</li>
+        <li>Do not share passwords; use a shared password manager vault for shared accounts.</li>
+        <li>Review accounts yearly and delete old/unused accounts.</li>
+      </ul>
+    </section>
+
+    <hr style="border:0;border-top:1px solid rgba(255,255,255,.08); margin:16px 0;">
 
     <label>
       Mode
       <select id="mode">
         <option value="password" selected>Password</option>
-        <option value="passphrase">Passphrase (sentence-style)</option>
+        <option value="passphrase">Passphrase</option>
       </select>
     </label>
+
+    <!-- Optional personal info check -->
+    <section>
+      <h2 style="margin:12px 0 6px; font-size:16px;">Optional: personal info check</h2>
+      <p class="sub" style="margin:0 0 8px;">If you enter personal info here, we will warn you if it appears in the result.</p>
+
+      <label>
+        Name / Username (optional)
+        <input id="piName" type="text" placeholder="e.g., Blessing, bndoro">
+      </label>
+
+      <label>
+        Birth year or date (optional)
+        <input id="piBirth" type="text" placeholder="e.g., 2003 or 03/14">
+      </label>
+    </section>
+
+    <hr style="border:0;border-top:1px solid rgba(255,255,255,.08); margin:16px 0;">
+
+    <!-- POLICY REQUIREMENTS (displayed) -->
+    <section>
+      <h2 style="margin:12px 0 6px; font-size:16px;">Password requirements (enforced)</h2>
+      <ul style="margin:8px 0 0; padding-left:18px;">
+        <li>Minimum 12 characters; maximum 32 characters</li>
+        <li>Must include at least 3 of 4 groups: uppercase, lowercase, digits, special characters</li>
+        <li>Spaces allowed, but none at the beginning or end</li>
+        <li>Blocks not-allowed words (example: <code>password</code>)</li>
+      </ul>
+    </section>
 
     <!-- PASSWORD CONTROLS -->
     <section id="passwordControls">
       <label>
         Length: <span id="lengthValue">16</span>
-        <input id="length" type="range" min="8" max="64" value="16" />
+        <input id="length" type="range" min="12" max="32" value="16" />
       </label>
 
       <div class="checks">
         <label><input type="checkbox" id="lower" checked> Lowercase (a-z)</label>
         <label><input type="checkbox" id="upper" checked> Uppercase (A-Z)</label>
         <label><input type="checkbox" id="digits" checked> Digits (0-9)</label>
-        <label><input type="checkbox" id="symbols" checked> Symbols</label>
+        <label><input type="checkbox" id="symbols" checked> Special characters</label>
       </div>
 
       <div class="checks">
+        <label><input type="checkbox" id="allowSpaces"> Allow spaces (not first/last)</label>
         <label><input type="checkbox" id="noAmbiguous" checked> Exclude ambiguous (O 0 I 1 l)</label>
       </div>
 
       <label>
         Exclude characters (optional)
-        <input id="exclude" type="text" placeholder="@#$" />
+        <input id="exclude" type="text" placeholder="@#$">
       </label>
+
+      <div class="checks">
+        <label><input type="checkbox" id="blockBanned" checked> Block not-allowed words</label>
+        <label><input type="checkbox" id="noRepeatPwd" checked> Prevent repeats (hashed history)</label>
+      </div>
     </section>
 
     <!-- PASSPHRASE CONTROLS -->
     <section id="passphraseControls" style="display:none;">
       <label>
         Your word list (optional — one per line or comma-separated)
-        <textarea id="customWords" rows="6" placeholder="red&#10;planet&#10;secure&#10;vault&#10;summer"></textarea>
+        <textarea id="customWords" rows="6" placeholder="Birds&#10;Swim&#10;Coffee&#10;Purple"></textarea>
       </label>
 
       <div class="checks">
         <label><input type="checkbox" id="useCustomOnly"> Use my words only (no fallback)</label>
-        <label><input type="checkbox" id="sentenceMode" checked> Sentence-style</label>
+        <label><input type="checkbox" id="allowRepeats" checked> Allow word reuse</label>
       </div>
 
       <label>
-        Sentence length
-        <select id="sentenceLen">
-          <option value="short" selected>Short</option>
-          <option value="medium">Medium</option>
-          <option value="long">Long</option>
+        Words to use: <span id="wordsValue">4</span>
+        <input id="words" type="range" min="3" max="8" value="4" />
+      </label>
+
+      <label>
+        Style
+        <select id="phraseStyle">
+          <option value="camel" selected>CamelCase (BirdsSwimCoffeePurple)</option>
+          <option value="underscore">Underscore (BirdsSwimCoffee_Purple)</option>
+          <option value="spaced">Spaced (Birds Swim Coffee Purple)</option>
         </select>
       </label>
 
-      <label>
-        Words to use: <span id="wordsValue">6</span>
-        <input id="words" type="range" min="4" max="12" value="6" />
-      </label>
-
-      <label>
-        Separator (used when Sentence-style is OFF)
-        <input id="separator" type="text" value="-" maxlength="3" />
-      </label>
-
       <div class="checks">
-        <label><input type="checkbox" id="capWords" checked> Capitalize first word</label>
-        <label><input type="checkbox" id="appendDigit"> Append a digit</label>
-        <label><input type="checkbox" id="appendSymbol"> Append a symbol</label>
-        <label><input type="checkbox" id="allowRepeats" checked> Allow repeats (word reuse)</label>
+        <label><input type="checkbox" id="ensureDigit" checked> Ensure a digit</label>
+        <label><input type="checkbox" id="ensureSpecial" checked> Ensure a special character</label>
+        <label><input type="checkbox" id="blockBannedPass" checked> Block not-allowed words</label>
+        <label><input type="checkbox" id="noRepeatPhrase" checked> Prevent repeats (hashed history)</label>
       </div>
 
-      <div class="checks">
-        <label><input type="checkbox" id="noRepeat" checked> Prevent repeats (uses hashed history in browser)</label>
-      </div>
-
-      <p class="hint">Leave the list blank to use the built-in wordlist.</p>
+      <p class="hint">If you leave the list blank, we use built-in uncommon words.</p>
     </section>
 
     <label>Generated</label>
