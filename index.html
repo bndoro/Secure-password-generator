@@ -11,13 +11,13 @@
 <body>
   <main class="card">
     <h1>Secure Password Generator</h1>
-    <p class="sub">CSPRNG-based generator with strength meter + passphrase mode</p>
+    <p class="sub">CSPRNG-based generator with strength meter + custom passphrase mode</p>
 
     <label>
       Mode
       <select id="mode">
         <option value="password" selected>Password</option>
-        <option value="passphrase">Passphrase</option>
+        <option value="passphrase">Passphrase (use my words)</option>
       </select>
     </label>
 
@@ -25,7 +25,7 @@
     <section id="passwordControls">
       <label>
         Length: <span id="lengthValue">16</span>
-        <input type="range" id="length" min="8" max="64" value="16">
+        <input id="length" type="range" min="8" max="64" value="16" />
       </label>
 
       <div class="checks">
@@ -41,63 +41,52 @@
 
       <label>
         Exclude characters (optional)
-        <input type="text" id="exclude" placeholder="@#$">
+        <input id="exclude" type="text" placeholder="@#$" />
       </label>
     </section>
 
     <!-- PASSPHRASE CONTROLS -->
-    <!-- PASSPHRASE CONTROLS -->
-<section id="passphraseControls" style="display:none;">
-  <label>
-    Your word list (one per line or comma-separated)
-    <textarea id="customWords" rows="6" placeholder="e.g.
-red
-planet
-secure
-vault
-summer
-"></textarea>
-  </label>
+    <section id="passphraseControls" style="display:none;">
+      <label>
+        Your word list (one per line or comma-separated)
+        <textarea id="customWords" rows="6" placeholder="red&#10;planet&#10;secure&#10;vault&#10;summer"></textarea>
+      </label>
 
-  <label>
-    Words to use: <span id="wordsValue">5</span>
-    <input type="range" id="words" min="2" max="12" value="5">
-  </label>
+      <label>
+        Words to use: <span id="wordsValue">5</span>
+        <input id="words" type="range" min="2" max="12" value="5" />
+      </label>
 
-  <label>
-    Separator
-    <input type="text" id="separator" value="-" maxlength="3">
-  </label>
+      <label>
+        Separator
+        <input id="separator" type="text" value="-" maxlength="3" />
+      </label>
 
-  <div class="checks">
-    <label><input type="checkbox" id="capWords"> Capitalize words</label>
-    <label><input type="checkbox" id="appendDigit"> Append a digit</label>
-    <label><input type="checkbox" id="appendSymbol"> Append a symbol</label>
-    <label><input type="checkbox" id="allowRepeats" checked> Allow repeats</label>
-  </div>
+      <div class="checks">
+        <label><input type="checkbox" id="capWords"> Capitalize words</label>
+        <label><input type="checkbox" id="appendDigit"> Append a digit</label>
+        <label><input type="checkbox" id="appendSymbol"> Append a symbol</label>
+        <label><input type="checkbox" id="allowRepeats" checked> Allow repeats</label>
+      </div>
 
-  <p class="hint">
-    Tip: Provide at least 20+ words for a strong passphrase. More words = more entropy.
-  </p>
-</section>
-
+      <p class="hint">Tip: Add 20+ words for stronger passphrases.</p>
+    </section>
 
     <label>Generated</label>
     <div class="outRow">
-      <input type="password" id="password" readonly>
+      <input id="password" type="password" readonly />
       <button id="toggle">Show</button>
       <button id="copy">Copy</button>
       <button id="regen">Regenerate</button>
     </div>
-
-    <p id="copyStatus" class="hint"></p>
+    <div id="copyStatus" class="hint"></div>
 
     <div class="meter">
-      <p><strong>Strength:</strong> <span id="strengthLabel">—</span></p>
+      <div><strong>Strength:</strong> <span id="strengthLabel">—</span></div>
       <div class="bar"><div id="barFill" class="fill"></div></div>
-      <p><strong>Entropy:</strong> <span id="entropyBits">—</span> bits</p>
-      <p><strong>Est. crack time (offline):</strong> <span id="crackFast">—</span></p>
-      <p><strong>Est. crack time (online):</strong> <span id="crackOnline">—</span></p>
+      <div><strong>Entropy:</strong> <span id="entropyBits">—</span> bits</div>
+      <div><strong>Est. crack time (offline):</strong> <span id="crackFast">—</span></div>
+      <div><strong>Est. crack time (online):</strong> <span id="crackOnline">—</span></div>
       <ul id="warnings"></ul>
     </div>
   </main>
