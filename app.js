@@ -4,12 +4,9 @@
 const POLICY = {
   minLen: 12,
   maxLen: 32,
-  // Must contain at least 3 of these 4 groups:
-  // uppercase, lowercase, digits, specials (spaces allowed separately)
   specials: "~`!#$%*()_+-={}[]:';?,./"
 };
 
-// Banned/common words (starter list; expand later)
 const BANNED_WORDS = [
   "password", "qwerty", "letmein", "admin", "welcome", "iloveyou", "rowdy"
 ];
@@ -27,7 +24,7 @@ const SETS = {
 
 const AMBIGUOUS = new Set(["O", "0", "I", "1", "l"]);
 
-// Uncommon fallback words (for passphrase + story)
+// Uncommon fallback words + story categories
 const WORDS = {
   adjectives: ["grumpy","silent","curious","rapid","gentle","odd","tiny","brave","sleepy","wild","electric","cosmic","frozen","noisy","saffron"],
   nouns: ["toaster","falcon","lantern","robot","turtle","cloud","ticket","vault","planet","river","anchor","kernel","socket","prism","matrix","packet"],
@@ -53,19 +50,15 @@ function isChecked(id){ const e = el(id); return e ? e.checked : false; }
 function val(id){ const e = el(id); return e ? e.value : ""; }
 
 // =====================
-// Random helpers (CSPRNG for passwords)
+// Random helpers (CSPRNG)
 // =====================
 function randomInt(maxExclusive){
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
   return buf[0] % maxExclusive;
 }
-function pick(list){
-  return list[randomInt(list.length)];
-}
-function pickChar(str){
-  return str[randomInt(str.length)];
-}
+function pick(list){ return list[randomInt(list.length)]; }
+function pickChar(str){ return str[randomInt(str.length)]; }
 function shuffle(arr){
   for (let i = arr.length - 1; i > 0; i--){
     const j = randomInt(i + 1);
@@ -141,7 +134,7 @@ function containsPersonalInfo(s, name, birth){
 }
 
 // =====================
-// Policy validation (12–32, 3-of-4 groups, space rule)
+// Policy validation
 // =====================
 function escapeForCharClass(chars){
   return chars.replace(/[-\\\]^\n]/g, "\\$&");
@@ -166,7 +159,7 @@ function validatePolicy(s){
 
 // =====================
 // Strength label (simple)
- // =====================
+// =====================
 function strengthLabel(s){
   const g = countGroupsPresent(s).present;
   if (s.length >= 20 && g >= 3) return { label: "Very Strong", pct: 90 };
@@ -176,7 +169,7 @@ function strengthLabel(s){
 }
 
 // =====================
-// Password (random) generator enforcing 3-of-4 selection
+// Password generator
 // =====================
 function buildPasswordPool(opts){
   const exclude = new Set((opts.exclude || "").split(""));
@@ -264,7 +257,7 @@ function generatePasswordNoRepeat(opts){
 }
 
 // =====================
-// Passphrase generator (Option A style)
+// Passphrase generator
 // =====================
 function parseWords(text){
   return (text || "")
@@ -307,18 +300,16 @@ function joinPassphrase(wordsTitle, style, separator){
   if (style === "spaced"){
     return wordsTitle.join(" ");
   }
-  // custom separator
-  const sep = (separator ?? "").toString(); // can be blank to remove "-"
+  // custom separator (can be blank)
+  const sep = (separator ?? "").toString();
   return wordsTitle.join(sep);
 }
 
 function twoDigits(){
-  // 10–99
-  return String(randomInt(90) + 10);
+  return String(randomInt(90) + 10); // 10–99
 }
 
 function generatePassphraseNoRepeat(opts){
-  // choose list: custom or built-in
   let list = parseWords(opts.customWords);
   let sourceName = "custom";
   if (list.length === 0){
@@ -326,7 +317,6 @@ function generatePassphraseNoRepeat(opts){
     sourceName = "built-in";
   }
 
-  // normalize title case
   const scope = `phrase_${fnv1a32(JSON.stringify({
     words: opts.words,
     style: opts.style,
@@ -350,11 +340,11 @@ function generatePassphraseNoRepeat(opts){
     if (opts.ensureSpecial) phrase += pickChar(SETS.symbols);
 
     phrase = phrase.trim();
+
     if (phrase.length < POLICY.minLen){
       while (phrase.length < POLICY.minLen) phrase += pickChar(SETS.digits);
     }
     if (phrase.length > POLICY.maxLen){
-      // try removing spaces first, then trim
       phrase = phrase.replace(/\s+/g, "");
       if (phrase.length > POLICY.maxLen) phrase = phrase.slice(0, POLICY.maxLen);
     }
@@ -376,7 +366,7 @@ function generatePassphraseNoRepeat(opts){
 }
 
 // =====================
-// Story-Mode generator (structured grammar rules)
+// Story-Mode generator
 // =====================
 function title(w){ return titleCase(w); }
 
@@ -388,7 +378,7 @@ function generateStoryOnce(templateId){
 
   if (templateId === "t1") return `The${adj}${noun}${verb}My${obj}`;
   if (templateId === "t2") return `A${adj}${noun}${verb}The${obj}`;
-  return `This${noun}${verb}That${obj}`; // t3
+  return `This${noun}${verb}That${obj}`;
 }
 
 function generateStoryNoRepeat(opts){
@@ -401,7 +391,6 @@ function generateStoryNoRepeat(opts){
     if (opts.addDigits) s += twoDigits();
     if (opts.addSpecial) s += pickChar(SETS.symbols);
 
-    // enforce length bounds
     if (s.length < POLICY.minLen){
       while (s.length < POLICY.minLen) s += pickChar(SETS.digits);
     }
@@ -457,8 +446,6 @@ const SYMBOL_READOUT = {
 };
 
 function splitCamelCaseWords(s){
-  // Split CamelCase into tokens; keep digits and symbols separate
-  // Example: TheGrumpyToasterBitMyCloud21! -> ["The","Grumpy","Toaster","Bit","My","Cloud","2","1","!"]
   const tokens = [];
   let buf = "";
 
@@ -471,23 +458,18 @@ function splitCamelCaseWords(s){
     const isLower = c >= "a" && c <= "z";
     const isDigit = c >= "0" && c <= "9";
     const isSpace = c === " ";
-
     const isSymbol = !isUpper && !isLower && !isDigit && !isSpace;
 
     if (isSpace){
       flush();
       continue;
     }
-
     if (isDigit || isSymbol){
       flush();
       tokens.push(c);
       continue;
     }
-
-    // letter
     if (isUpper && buf && (buf[buf.length - 1] >= "a" && buf[buf.length - 1] <= "z")){
-      // boundary: ...aB...
       flush();
       buf = c;
     } else {
@@ -500,15 +482,50 @@ function splitCamelCaseWords(s){
 
 function phoneReadout(password){
   const tokens = splitCamelCaseWords(password);
-  const out = tokens.map(t => {
-    if (t.length === 1 && t >= "0" && t <= "9") return t; // digit spoken as itself
+  return tokens.map(t => {
+    if (t.length === 1 && t >= "0" && t <= "9") return t;
     if (t.length === 1 && SYMBOL_READOUT[t]) return SYMBOL_READOUT[t];
     if (t.length === 1 && !(t >= "0" && t <= "9")) return `symbol ${t}`;
     return t;
+  }).join(" ");
+}
+
+// =====================
+// STEP 3: Image generation client wiring
+// =====================
+function safeStoryPromptFromPassword(pw){
+  // Convert CamelCase story into safe scene tokens; drop digits/symbols.
+  const tokens = splitCamelCaseWords(pw).filter(t => {
+    if (t.length === 1 && /[0-9]/.test(t)) return false;
+    if (t.length === 1 && SYMBOL_READOUT[t]) return false;
+    return true;
   });
 
-  // Make digits read spaced: "2 1" instead of "21"
-  return out.join(" ");
+  const joined = tokens.join(" ");
+  return `A simple, colorful cartoon illustration of: ${joined}. Friendly style, clear objects, no text, no letters, no numbers in the image.`;
+}
+
+async function callStoryImage(prompt){
+  // Works when your site is hosted on the same domain as the serverless function.
+  // If you host API separately, replace with full Vercel URL.
+  const r = await fetch("/api/story-image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt })
+  });
+
+  let data;
+  try { data = await r.json(); }
+  catch { data = null; }
+
+  if (!r.ok){
+    const msg = data?.error || "Image request failed";
+    throw new Error(msg);
+  }
+
+  if (data?.b64) return { type: "b64", value: data.b64 };
+  if (data?.url) return { type: "url", value: data.url };
+  throw new Error("No image returned");
 }
 
 // =====================
@@ -560,6 +577,15 @@ function setModeUI(){
   el("passwordControls").style.display = mode === "password" ? "" : "none";
   el("passphraseControls").style.display = mode === "passphrase" ? "" : "none";
   el("storyControls").style.display = mode === "story" ? "" : "none";
+
+  // Hide image if not in story mode
+  const img = el("storyImg");
+  const status = el("imageStatus");
+  if (mode !== "story"){
+    if (img) img.style.display = "none";
+    if (status) status.textContent = "";
+  }
+
   regenerate();
 }
 
@@ -696,6 +722,37 @@ el("copy").addEventListener("click", () => {
   el("copyStatus").textContent = "Copied!";
   setTimeout(() => el("copyStatus").textContent = "", 1200);
 });
+
+// STEP 3: Image button wiring
+const genImageBtn = el("genImage");
+if (genImageBtn) {
+  genImageBtn.addEventListener("click", async () => {
+    try {
+      const mode = val("mode") || "password";
+      if (mode !== "story") return;
+
+      const pw = el("password").value;
+      if (!pw) return;
+
+      el("imageStatus").textContent = "Generating image...";
+      const prompt = safeStoryPromptFromPassword(pw);
+
+      const out = await callStoryImage(prompt);
+
+      const img = el("storyImg");
+      if (out.type === "b64") {
+        img.src = "data:image/png;base64," + out.value;
+      } else {
+        img.src = out.value;
+      }
+
+      img.style.display = "";
+      el("imageStatus").textContent = "Done.";
+    } catch (e) {
+      el("imageStatus").textContent = `Error: ${e.message}`;
+    }
+  });
+}
 
 // init
 el("lengthValue").textContent = val("length") || "16";
