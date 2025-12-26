@@ -22,7 +22,7 @@ const DEFAULT_WORDLIST = [
   "endpoint","incident","alert","threat","defense"
 ];
 
-// Simple English glue words for sentence templates
+// Simple glue words for sentence templates
 const GLUE = {
   determiners: ["the", "a", "this"],
   preps: ["over", "under", "near", "beyond", "within", "around"],
@@ -57,13 +57,9 @@ function shuffle(arr){
 // =====================
 // No-repeat tracking (hashed)
 // =====================
-// We store only hashes in localStorage (not plaintext).
-// This prevents repeats across reloads, but is still finite/best-effort.
 const sessionSeen = new Set();
 
 function fnv1a32(str){
-  // Non-cryptographic hash; enough for "avoid repeats" without storing plaintext.
-  // Returns hex.
   let h = 0x811c9dc5;
   for (let i = 0; i < str.length; i++){
     h ^= str.charCodeAt(i);
@@ -91,7 +87,6 @@ function loadHistory(scope){
 
 function saveHistory(scope, set){
   const key = makeHistoryKey(scope);
-  // cap to prevent unbounded growth
   const MAX = 4000;
   const arr = Array.from(set);
   const trimmed = arr.length > MAX ? arr.slice(arr.length - MAX) : arr;
@@ -99,8 +94,6 @@ function saveHistory(scope, set){
 }
 
 function computeScopeFingerprint(mode, effectiveWordlist){
-  // Uniqueness scope changes when the wordlist changes.
-  // This avoids a massive "global" history that blocks outputs after user edits words.
   const wl = effectiveWordlist.map(w => w.toLowerCase()).sort().join(",");
   return `${mode}_${fnv1a32(wl)}`;
 }
@@ -108,7 +101,6 @@ function computeScopeFingerprint(mode, effectiveWordlist){
 function isRepeat(candidate, scope, noRepeatEnabled){
   if (!noRepeatEnabled) return false;
   const hash = fnv1a32(candidate);
-
   if (sessionSeen.has(`${scope}:${hash}`)) return true;
 
   const persisted = loadHistory(scope);
@@ -170,7 +162,6 @@ function generatePasswordOnce(opts){
 }
 
 function generatePasswordNoRepeat(opts, noRepeatEnabled){
-  // scope for passwords: based on the pool definition (not perfect, but good)
   const { pool } = buildPasswordPool(opts);
   const scope = `password_${fnv1a32(pool)}`;
 
@@ -235,12 +226,12 @@ function pickWords({ wordCount, list, allowRepeats }){
   return chosen;
 }
 
-// Sentence template generator.
-// We keep glue words fixed, and inject your words into “slots”.
+// Short/Medium/Long sentence templates
 function makeSentence(chosenWords, opts){
-  // Ensure we have at least 4+ chosen words to place.
   const words = [...chosenWords];
-  while (words.length < 4) words.push(pickFrom(chosenWords));
+
+  // Ensure enough words exist for templates
+  while (words.length < 6) words.push(pickFrom(chosenWords));
 
   const det1 = pickFrom(GLUE.determiners);
   const det2 = pickFrom(GLUE.determiners);
@@ -248,24 +239,23 @@ function makeSentence(chosenWords, opts){
   const verb = pickFrom(GLUE.verbs);
   const adv = pickFrom(GLUE.adverbs);
 
-  // Template: "the W1 W2 verb adv prep the W3 W4"
-  // Looks English-like without needing POS tagging.
-  let sentence = `${det1} ${words[0]} ${words[1]} ${verb} ${adv} ${prep} ${det2} ${words[2]} ${words[3]}`;
+  let sentence = "";
 
-  // If user requested more words, append as a tail phrase: "with W5 W6 ..."
-  if (words.length > 4){
-    const tail = words.slice(4).join(" ");
-    sentence += ` with ${tail}`;
+  if (opts.sentenceLen === "short") {
+    // 4 content words
+    // "The W1 W2 verb the W3 W4."
+    sentence = `${det1} ${words[0]} ${words[1]} ${verb} ${det2} ${words[2]} ${words[3]}.`;
+  } else if (opts.sentenceLen === "medium") {
+    // 4 content words + glue
+    // "The W1 W2 verb adv prep the W3 W4."
+    sentence = `${det1} ${words[0]} ${words[1]} ${verb} ${adv} ${prep} ${det2} ${words[2]} ${words[3]}.`;
+  } else {
+    // long (still capped): 5 content words
+    // "The W1 W2 verb adv prep the W3 W4 W5."
+    sentence = `${det1} ${words[0]} ${words[1]} ${verb} ${adv} ${prep} ${det2} ${words[2]} ${words[3]} ${words[4]}.`;
   }
 
-  // Capitalize first word if enabled
-  if (opts.capFirstWord){
-    sentence = capFirst(sentence);
-  }
-
-  // Add period for readability; still copyable as a “password”
-  sentence += ".";
-
+  if (opts.capFirstWord) sentence = capFirst(sentence);
   return sentence;
 }
 
@@ -273,7 +263,6 @@ function makeJoinPassphrase(chosenWords, opts){
   const sep = (opts.separator ?? "-").toString();
   let phrase = chosenWords.join(sep);
   if (opts.capFirstWord && chosenWords.length > 0){
-    // capitalize first token only (more sentence-like)
     const parts = phrase.split(sep);
     parts[0] = capFirst(parts[0]);
     phrase = parts.join(sep);
@@ -311,7 +300,7 @@ function generatePassphraseOnce(opts){
 
   let base;
   if (opts.sentenceMode){
-    base = makeSentence(chosen, { capFirstWord: opts.capWords });
+    base = makeSentence(chosen, { capFirstWord: opts.capWords, sentenceLen: opts.sentenceLen });
   } else {
     base = makeJoinPassphrase(chosen, { separator: opts.separator, capFirstWord: opts.capWords });
   }
@@ -401,7 +390,6 @@ function regenerate(){
         exclude: val("exclude")
       };
 
-      // password no-repeat always ON by default (session+persisted)
       out = generatePasswordNoRepeat(opts, true);
       bits = entropyPassword(out.value.length, out.poolSize);
 
@@ -410,6 +398,7 @@ function regenerate(){
         customWords: val("customWords"),
         useCustomOnly: isChecked("useCustomOnly"),
         sentenceMode: isChecked("sentenceMode"),
+        sentenceLen: val("sentenceLen") || "short",
         words: Number(val("words") || 6),
         separator: val("separator") || "-",
         capWords: isChecked("capWords"),
@@ -423,14 +412,10 @@ function regenerate(){
       bits = entropyPassphrase(opts.words, out.wordlistSize, opts.appendDigit, opts.appendSymbol);
 
       const sourceMsg = out.sourceName === "custom"
-        ? `Sentence from your words (${out.wordlistSize} unique).`
-        : `Sentence from built-in words (${out.wordlistSize}).`;
+        ? `Using your words (${out.wordlistSize} unique).`
+        : `Using built-in words (${out.wordlistSize}).`;
 
-      const extra = (out.sourceName === "custom" && out.wordlistSize < 20)
-        ? " Add more words to reduce collisions and increase strength."
-        : "";
-
-      el("warnings").innerHTML = `<li>${sourceMsg}${extra}</li>`;
+      el("warnings").innerHTML = `<li>${sourceMsg} Sentence length: ${opts.sentenceLen}.</li>`;
     }
 
     el("password").value = out.value;
@@ -476,7 +461,7 @@ el("words").addEventListener("input", (e) => {
   regenerate();
 });
 
-["customWords","useCustomOnly","sentenceMode","separator","capWords","appendDigit","appendSymbol","allowRepeats","noRepeat"].forEach(id => {
+["customWords","useCustomOnly","sentenceMode","sentenceLen","separator","capWords","appendDigit","appendSymbol","allowRepeats","noRepeat"].forEach(id => {
   const n = el(id);
   if (!n) return;
   n.addEventListener("input", regenerate);
