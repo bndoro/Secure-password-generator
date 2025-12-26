@@ -1,118 +1,131 @@
-body {
-  margin: 0;
-  padding: 0;
-  font-family: system-ui, sans-serif;
-  background: #0b0f17;
-  color: #e6e9ef;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
+const SETS = {
+  lower: "abcdefghijklmnopqrstuvwxyz",
+  upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  digits: "0123456789",
+  symbols: "!@#$%^&*()-_=+[]{};:,.<>?"
+};
+
+const AMBIGUOUS = new Set(["O", "0", "I", "1", "l"]);
+
+function el(id) { return document.getElementById(id); }
+function isChecked(id) { const e = el(id); return e ? e.checked : false; }
+function val(id) { const e = el(id); return e ? e.value : ""; }
+
+function randomInt(maxExclusive) {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return buf[0] % maxExclusive; // acceptable for UI; can be upgraded to rejection sampling later
 }
 
-.card {
-  background: #101827;
-  padding: 24px;
-  border-radius: 14px;
-  width: 100%;
-  max-width: 520px;
-  box-shadow: 0 0 40px rgba(0,0,0,0.4);
+function shuffleInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
-h1 {
-  margin-top: 0;
+// ---------------------
+// PASSWORD MODE
+// ---------------------
+function buildPasswordPool(opts) {
+  const exclude = new Set((opts.exclude || "").split(""));
+  let pool = "";
+  const groups = [];
+
+  const filterChar = (c) => {
+    if (exclude.has(c)) return false;
+    if (opts.noAmbiguous && AMBIGUOUS.has(c)) return false;
+    return true;
+  };
+
+  for (const key of ["lower","upper","digits","symbols"]) {
+    if (opts[key]) {
+      const g = SETS[key].split("").filter(filterChar).join("");
+      if (g.length > 0) groups.push(g);
+      pool += g;
+    }
+  }
+
+  if (!pool || groups.length === 0) throw new Error("Select at least one character set (and ensure exclusions don’t remove all chars).");
+  if (opts.length < groups.length) throw new Error("Length too short for selected character sets.");
+
+  return { pool, groups };
 }
 
-.sub {
-  color: #9aa4bf;
-  font-size: 14px;
+function generatePassword(opts) {
+  const { pool, groups } = buildPasswordPool(opts);
+  const out = [];
+
+  // guarantee one from each group
+  for (const g of groups) out.push(g[randomInt(g.length)]);
+  while (out.length < opts.length) out.push(pool[randomInt(pool.length)]);
+
+  shuffleInPlace(out);
+  return out.join("");
 }
 
-label {
-  display: block;
-  margin-top: 12px;
+// ---------------------
+// PASSPHRASE MODE (custom words)
+// ---------------------
+function parseCustomWords(text) {
+  // Accept newline or comma-separated; trim; remove empties; dedupe
+  const raw = text
+    .split(/[\n,]+/g)
+    .map(w => w.trim())
+    .filter(Boolean);
+
+  // dedupe while preserving order
+  const seen = new Set();
+  const words = [];
+  for (const w of raw) {
+    const key = w.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      words.push(w);
+    }
+  }
+  return words;
 }
 
-input[type="text"],
-input[type="password"],
-select {
-  width: 100%;
-  padding: 8px;
-  margin-top: 4px;
-  background: #1b2235;
-  color: white;
-  border: none;
-  border-radius: 6px;
+function capitalize(w) {
+  return w.length ? w[0].toUpperCase() + w.slice(1) : w;
 }
 
-textarea {
-  width: 100%;
-  padding: 8px;
-  margin-top: 4px;
-  background: #1b2235;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-family: inherit;
+function generatePassphraseFromCustomWords(opts) {
+  const words = parseCustomWords(opts.customWords || "");
+  if (words.length < 2) {
+    throw new Error("Add at least 2 words to your word list for passphrase mode.");
+  }
+
+  const count = opts.words;
+  if (!opts.allowRepeats && count > words.length) {
+    throw new Error("Not enough unique words for the selected word count (turn on 'Allow repeats' or add more words).");
+  }
+
+  const chosen = [];
+  const available = [...words];
+
+  for (let i = 0; i < count; i++) {
+    const list = opts.allowRepeats ? words : available;
+    const pick = list[randomInt(list.length)];
+
+    chosen.push(opts.capWords ? capitalize(pick) : pick);
+
+    if (!opts.allowRepeats) {
+      const idx = available.findIndex(x => x === pick);
+      if (idx >= 0) available.splice(idx, 1);
+    }
+  }
+
+  let phrase = chosen.join(opts.separator);
+
+  if (opts.appendDigit) phrase += SETS.digits[randomInt(SETS.digits.length)];
+  if (opts.appendSymbol) phrase += SETS.symbols[randomInt(SETS.symbols.length)];
+
+  return { phrase, wordlistSize: words.length };
 }
 
-input[type="range"] {
-  width: 100%;
-}
-
-.checks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.outRow {
-  display: flex;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-button {
-  background: #7c3aed;
-  border: none;
-  color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-button:hover {
-  opacity: 0.85;
-}
-
-.hint {
-  font-size: 13px;
-  color: #9aa4bf;
-}
-
-.meter {
-  margin-top: 16px;
-}
-
-.bar {
-  height: 10px;
-  background: #222;
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.fill {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, #7c3aed, #3b82f6);
-  transition: width 0.2s;
-}
-
-ul {
-  color: #fbbf24;
-  padding-left: 18px;
-}
-section { 
-  margin-top: 10px; 
-}
+// ---------------------
+// Strength + crack time (estimates)
+// ----------------
