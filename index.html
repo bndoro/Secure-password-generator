@@ -46,23 +46,41 @@
     </section>
 
     <!-- PASSPHRASE CONTROLS -->
-    <section id="passphraseControls" style="display:none;">
-      <label>
-        Words: <span id="wordsValue">5</span>
-        <input type="range" id="words" min="3" max="10" value="5">
-      </label>
+    <!-- PASSPHRASE CONTROLS -->
+<section id="passphraseControls" style="display:none;">
+  <label>
+    Your word list (one per line or comma-separated)
+    <textarea id="customWords" rows="6" placeholder="e.g.
+red
+planet
+secure
+vault
+summer
+"></textarea>
+  </label>
 
-      <label>
-        Separator
-        <input type="text" id="separator" value="-" maxlength="3">
-      </label>
+  <label>
+    Words to use: <span id="wordsValue">5</span>
+    <input type="range" id="words" min="2" max="12" value="5">
+  </label>
 
-      <div class="checks">
-        <label><input type="checkbox" id="capWords"> Capitalize words</label>
-        <label><input type="checkbox" id="appendDigit"> Append a digit</label>
-        <label><input type="checkbox" id="appendSymbol"> Append a symbol</label>
-      </div>
-    </section>
+  <label>
+    Separator
+    <input type="text" id="separator" value="-" maxlength="3">
+  </label>
+
+  <div class="checks">
+    <label><input type="checkbox" id="capWords"> Capitalize words</label>
+    <label><input type="checkbox" id="appendDigit"> Append a digit</label>
+    <label><input type="checkbox" id="appendSymbol"> Append a symbol</label>
+    <label><input type="checkbox" id="allowRepeats" checked> Allow repeats</label>
+  </div>
+
+  <p class="hint">
+    Tip: Provide at least 20+ words for a strong passphrase. More words = more entropy.
+  </p>
+</section>
+
 
     <label>Generated</label>
     <div class="outRow">
