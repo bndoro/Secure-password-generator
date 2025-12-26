@@ -11,13 +11,13 @@
 <body>
   <main class="card">
     <h1>Secure Password Generator</h1>
-    <p class="sub">CSPRNG-based generator with strength meter + passphrase mode</p>
+    <p class="sub">CSPRNG generator with strength meter + sentence-style passphrases + no-repeat</p>
 
     <label>
       Mode
       <select id="mode">
         <option value="password" selected>Password</option>
-        <option value="passphrase">Passphrase (built-in or my words)</option>
+        <option value="passphrase">Passphrase (sentence-style)</option>
       </select>
     </label>
 
@@ -54,23 +54,28 @@
 
       <div class="checks">
         <label><input type="checkbox" id="useCustomOnly"> Use my words only (no fallback)</label>
+        <label><input type="checkbox" id="sentenceMode" checked> Sentence-style</label>
       </div>
 
       <label>
-        Words to use: <span id="wordsValue">5</span>
-        <input id="words" type="range" min="2" max="12" value="5" />
+        Words to use: <span id="wordsValue">6</span>
+        <input id="words" type="range" min="4" max="12" value="6" />
       </label>
 
       <label>
-        Separator
+        Separator (used when Sentence-style is OFF)
         <input id="separator" type="text" value="-" maxlength="3" />
       </label>
 
       <div class="checks">
-        <label><input type="checkbox" id="capWords"> Capitalize words</label>
+        <label><input type="checkbox" id="capWords" checked> Capitalize first word</label>
         <label><input type="checkbox" id="appendDigit"> Append a digit</label>
         <label><input type="checkbox" id="appendSymbol"> Append a symbol</label>
-        <label><input type="checkbox" id="allowRepeats" checked> Allow repeats</label>
+        <label><input type="checkbox" id="allowRepeats" checked> Allow repeats (word reuse)</label>
+      </div>
+
+      <div class="checks">
+        <label><input type="checkbox" id="noRepeat" checked> Prevent repeats (uses hashed history in browser)</label>
       </div>
 
       <p class="hint">Leave the list blank to use the built-in wordlist.</p>
